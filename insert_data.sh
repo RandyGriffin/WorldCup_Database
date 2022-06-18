@@ -8,57 +8,63 @@ else
 fi
 
 # Do not change code above this line. Use the PSQL variable above to query your database.
-echo $($PSQL "TRUNCATE TABLE games, teams")
-cat games.csv | while IFS=',' read YEAR ROUND WINNER OPPONENT WINNER_G OPPONENT_G
+echo $($PSQL "TRUNCATE TABLE games, teams;")
+
+#year,round,winner,opponent,winner_goals,opponent_goals
+cat games.csv | while IFS="," read YEAR ROUND WINNER OPPONENT WINNER_GOALS OPPONENT_GOALS 
 do
-TEAMS=$($PSQL "SELECT name FROM teams WHERE name='$WINNER'")
+  #insert teams winner
   if [[ $WINNER != "winner" ]]
-    then 
-  #If not found
-    if [[ -z $TEAMS ]]
-    then
-  #Insert winner
-    INSERT_TEAM=$($PSQL "INSERT INTO teams(name) VALUES('$WINNER')")
-    if [[ INSERT_TEAM == "INSERT 0 1" ]]
   then
-    echo Inserted into teams, $WINNER
-    fi
-  fi
-fi
+    # get team winner_id
+    WINNER_ID=$($PSQL "SELECT team_id FROM teams WHERE name='$WINNER'")
 
-  # Insert Opponent
-  TEAMS2=$($PSQL "SELECT name FROM teams WHERE name='$OPPONENT'")
-  if [[ $OPPONENT != "opponent" ]]
-    then 
     # if not found
-    if [[ -z $TEAMS2 ]]
-      then
-      # insert major
-      INSERT_TEAM2=$($PSQL "INSERT INTO teams(name) VALUES('$OPPONENT')")
-      if [[ $INSERT_TEAM2 == "INSERT 0 1" ]]
-      then
-        echo Inserted into teams, $OPPONENT
-      fi
-    fi
-  fi
-
-  TEAM_ID_W=$($PSQL "SELECT team_id FROM teams WHERE name='$WINNER'")
-  TEAM_ID_O=$($PSQL "SELECT team_id FROM teams WHERE name='$OPPONENT'")
-
-if [[ -n $TEAM_ID_W || -n $TEAM_ID_O ]] 
-then
-#Insert Games
-  if [[ $YEAR != "year" ]] 
-  then
-#Insert game results
-    INSERT_GAMES=$($PSQL "INSERT INTO games(year, round, winner_id, opponent_id, winner_goals, opponent_goals) VALUES($YEAR, '$Round', $TEAM_ID_W, $TEAM_ID_O, $WINNER_G, $OPPONENT_G)")
-    if [[ $INSERT_GAMES == "INSERT 0 1" ]] 
+    if [[ -z $WINNER_ID ]]
     then
-      echo Inserted into games, $YEAR 
+      # insert winner
+      INSERT_TEAM_RESULT=$($PSQL "INSERT INTO teams(name) VALUES('$WINNER')")
+      if [[ $INSERT_TEAM_RESULT == "INSERT 0 1" ]]
+      then
+        echo Winning team Inserted into teams, $WINNER
+      fi
+
+      # get new winner_id
+      WINNER_ID=$($PSQL "SELECT team_id FROM teams WHERE name='$WINNER'")
     fi
   fi
-fi
 
+  #insert teams opponent
+  if [[ $OPPONENT != "opponent" ]]
+  then 
+     # get team opponent_id
+    OPPONENT_ID=$($PSQL "SELECT team_id FROM teams WHERE name='$OPPONENT'")
+
+    # if not found
+    if [[ -z $OPPONENT_ID ]]
+    then
+      # insert opponent
+      INSERT_TEAM_RESULT=$($PSQL "INSERT INTO teams(name) VALUES('$OPPONENT')")
+      if [[ $INSERT_TEAM_RESULT == "INSERT 0 1" ]]
+      then
+        echo Opponent team Inserted into teams, $OPPONENT
+      fi
+
+      # get new opponent_id
+      OPPONENT_ID=$($PSQL "SELECT team_id FROM teams WHERE name='$OPPONENT'")
+    fi
+  fi
+
+  #insert games 
+  if [[ $YEAR != "year" ]]
+  then 
+    #insert games 
+    ##year,round,winner,opponent,winner_goals,opponent_goals
+    INSERT_GAMES_RESULT=$($PSQL "INSERT INTO games(year, round, winner_id, opponent_id, winner_goals, opponent_goals) VALUES($YEAR, '$ROUND', $WINNER_ID, $OPPONENT_ID, $WINNER_GOALS, $OPPONENT_GOALS)")
+
+    if [[ $INSERT_GAMES_RESULT == "INSERT 0 1" ]]
+    then
+      echo "Inserted into games : $YEAR, $ROUND, $WINNER_ID, $OPPONENT_ID, $WINNER_GOALS, $OPPONENT_GOALS"
+    fi
+  fi
 done
-
-
